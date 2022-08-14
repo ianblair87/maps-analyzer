@@ -13,17 +13,12 @@ import random
 import json
 import math
 from tqdm import tqdm
-from torchvision.io import read_image
-from sklearn.cluster import DBSCAN, KMeans
 import numpy as np
-import torch.optim as optim
 import pickle
 from IPython.display import clear_output
 import albumentations as A
-import segmentation_models_pytorch as smp
 from datetime import datetime
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 def classnum(shape):
@@ -99,19 +94,19 @@ class DraftDataset(Dataset):
         self.masks_processed = []
         for idx in range(self.length):
             assert idx < len(self.labels)
-            img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0] + '.jpg')
+            img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0])
             print('Processing {0}'.format(img_path))
             pic = cv2.imread(img_path)
             b, g, r = cv2.split(pic)
             self.images.append(cv2.merge([r, g, b]))
         for idx in range(self.length):
             assert idx < len(self.labels)
-            img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0] + '.jpg')
+            img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0])
             print('Processing {0}'.format(img_path))
             pic = cv2.imread(img_path)
             b, g, r = cv2.split(pic) # по умолчанию cv2 почему-то отдает цвета в порядке BGR вместо RGB
             self.images.append(cv2.merge([r, g, b]))
-            self.annotations.append(json.load(open(data_dir + self.labels.iloc[idx, 0] + '.json', 'r')))
+            self.annotations.append(json.load(open(data_dir + self.labels.iloc[idx, 0].split('.')[0] + '.json', 'r')))
             img = self.images[-1]
             annotation = self.annotations[-1]
             img_shape = img.shape
@@ -128,8 +123,8 @@ class DraftDataset(Dataset):
             clear_output(wait=True)
         self.X = self.images
         self.y = self.masks
-        pickle.dump(dataset.y, open('data/Y.data', 'wb'))
-        pickle.dump(dataset.X, open('data/X.data', 'wb'))
+        pickle.dump(self.y, open('data/Y.data', 'wb'))
+        pickle.dump(self.X, open('data/X.data', 'wb'))
     
     def __len__(self):
         return self.length
@@ -155,15 +150,15 @@ class AugmentedDataset(Dataset):
     def __getitem__(self, idx):
         X, y = self.draft[idx]
         augmented = self.augmentor(image=X, mask=y)
-        X = (torch.tensor(augmented['image']).permute(2, 0, 1) / 256).float()
-        y = torch.tensor(augmented['mask']).float().view(1, 256, 256)
+        X = (np.transpose(augmented['image'], axes=[0, 1, 2]) / 255)
+        y = np.array(augmented['mask'])
         return X, y
 
 def get_data():
     dataset = DraftDataset('data/annotations.csv', 'data/')
 
     aug = A.Compose([
-        A.RandomCrop(width=256, height=256, p=1),
+        A.RandomCrop(width=128, height=128, p=1),
         A.RandomRotate90(),
         A.Flip(),
         A.Transpose(),
