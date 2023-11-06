@@ -43,7 +43,9 @@ approaches:
 - [ ] u-net
 - [ ] rule based approach
 - [ ] red lines removal + rules
+- [ ] turn semantic segmentation output into a shape
 - [ ] ???
+      
 currently have u-net with decent quality
 
 ### detect configuration of distance
