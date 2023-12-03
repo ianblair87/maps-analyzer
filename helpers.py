@@ -1,5 +1,9 @@
 import os
 import json
+import numpy as np
+from triangle import get_triangle_impl
+from course_layer import detect_course
+from circles import get_circles_impl
 
 def cache(func):
     def wrapper(session_id):
@@ -31,7 +35,13 @@ def need_data(func, call_list):
 @cache
 def get_separated_layers(session_id):
     # Get Ian's CNN and apply to an image
-    pass
+    course = detect_course(session_id)
+    np.save(open(f'{session_id}/course_layer.npy', 'wb'), course)
+    return {
+        'course_layer_picture': f'{session_id}/course_layer.jpg',
+        'course_layer_data': f'{session_id}/course_layer.npy'
+    }
+    
 
 @cache
 def get_runnable_mask(session_id):
@@ -42,14 +52,13 @@ def get_runnable_mask(session_id):
 @cache
 @need_data([get_separated_layers])
 def get_triangle(session_id):
-    # get triangle based on triangle.ipynb
-    pass
+    return get_triangle_impl(session_id)
 
 @cache
 @need_data([get_separated_layers])
 def get_circles(session_id):
     # get_circles based on track_analysis.ipynb
-    pass
+    return get_circles_impl(session_id)
 
 @cache
 @need_data([get_triangle, get_circles])
