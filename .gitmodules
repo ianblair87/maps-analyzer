@@ -1,0 +1,3 @@
+[submodule "573-orienteering"]
+	path = 573-orienteering
+	url = git@github.com:ianblair87/573-orienteering.git
