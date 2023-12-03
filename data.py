@@ -45,6 +45,37 @@ def prepare(pic):
     res = pic / 255
     return res
 
+def get_bounding_box(shape):
+    if shape['shape_type'].lower() == 'line':
+        v0, v1 = shape['points']
+        return [min(v0[0], v1[0]), min(v0[1], v1[1])], [max(v0[0], v1[0]), max(v0[1], v1[1])]
+    if shape['shape_type'].startswith('line'):
+        bb = None
+        for i in range(len(shape['points']) - 1):
+            line = {'points': [shape['points'][i], shape['points'][i + 1]],
+                    'shape_type': 'line'}
+            b1 = get_bounding_box(line)
+            if bb is None:
+                bb = b1
+            else:
+                bb[0][0] = min(bb[0][0], b1[0][0])
+                bb[0][1] = min(bb[0][1], b1[0][1])
+                bb[1][0] = max(bb[1][0], b1[1][0])
+                bb[1][1] = max(bb[1][1], b1[1][1])
+        return bb
+    if shape['shape_type'] == 'polygon':
+        border = {
+            'points': shape['points'],
+            'shape_type': 'lines'
+        }
+        return get_bounding_box(border)
+    if shape['shape_type'] == 'circle':
+        v = shape['points'][0]
+        v1 = shape['points'][1]
+        r = np.linalg.norm([v1[0] - v[0], v1[1] - v[1]])
+        return [v[0] - r, v[1] - r], [v[0] + r, v[1] + r]
+    return None
+
 def detect(x, y, shape):
     if shape['shape_type'] == 'Line':
         v0, v1 = shape['points']
@@ -74,6 +105,12 @@ def detect(x, y, shape):
         if s % 2 != 0:
             return True
         return False
+    if shape['shape_type'] == 'circle':
+        v = shape['points'][0]
+        v1 = shape['points'][1]
+        r = np.linalg.norm([v1[0] - v[0], v1[1] - v[1]])
+        if abs(np.linalg.norm([x - v[0], y - v[1]]) - r) < 5:
+            return True
     return False
 
 class DraftDataset(Dataset):
@@ -154,20 +191,15 @@ class AugmentedDataset(Dataset):
         y = np.array(augmented['mask'])
         return X, y
 
-def get_data():
+def get_data(size=128):
     dataset = DraftDataset('data/annotations.csv', 'data/')
 
     aug = A.Compose([
-        A.RandomCrop(width=128, height=128, p=1),
+        A.RandomCrop(width=size, height=size, p=1),
         A.RandomRotate90(),
         A.Flip(),
         A.Transpose(),
         A.GaussNoise(p=.2),
-        A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.2, rotate_limit=45, p=0.2),
-        A.OneOf([
-            A.OpticalDistortion(p=0.3),
-            A.GridDistortion(p=.1),
-        ], p=0.2),
         A.OneOf([
             A.CLAHE(clip_limit=2),
             A.RandomBrightnessContrast(),            
