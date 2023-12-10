@@ -129,14 +129,7 @@ class DraftDataset(Dataset):
             return
         self.masks = []
         self.masks_processed = []
-        for idx in range(self.length):
-            assert idx < len(self.labels)
-            img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0])
-            print('Processing {0}'.format(img_path))
-            pic = cv2.imread(img_path)
-            b, g, r = cv2.split(pic)
-            self.images.append(cv2.merge([r, g, b]))
-        for idx in range(self.length):
+        for idx in tqdm(range(self.length)):
             assert idx < len(self.labels)
             img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0])
             print('Processing {0}'.format(img_path))
@@ -148,19 +141,22 @@ class DraftDataset(Dataset):
             annotation = self.annotations[-1]
             img_shape = img.shape
             mask = np.zeros(shape=(img_shape[0], img_shape[1]))
-            for i in tqdm(range(img_shape[0]), desc='X loop', position=0, leave=True):
-                for j in range(img_shape[1]):
-                    for shape in annotation['shapes']:
-                        if detect(j, i, shape): # проблема с индексацией labelme
-                            mask[i][j] = float(classnum(shape))
-                            break
+            for shape in annotation['shapes']:
+                lb, rt = get_bounding_box(shape)
+                lb[0] = max(lb[0], 0)
+                lb[1] = max(lb[1], 0)
+                rt[0] = min(rt[0], img.shape[1] - 1)
+                rt[1] = min(rt[1], img.shape[0] - 1)
+                for i in range(int(lb[0] - 1), int(rt[0] + 1)):
+                    for j in range(int(lb[1] - 1), int(rt[1] + 1)):
+                        if detect(i, j, shape):
+                            mask[j][i] = float(classnum(shape))
             self.masks.append(mask)
             print('Saving')
-            pickle.dump(self.masks, open('data/y.data', 'wb'))
             clear_output(wait=True)
         self.X = self.images
         self.y = self.masks
-        pickle.dump(self.y, open('data/Y.data', 'wb'))
+        pickle.dump(self.y, open('data/y.data', 'wb'))
         pickle.dump(self.X, open('data/X.data', 'wb'))
     
     def __len__(self):

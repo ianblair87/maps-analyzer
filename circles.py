@@ -18,11 +18,16 @@ def check(c, img, visualize=False):
         plt.show()
     return res_square.sum() < 0.02 * 255 * (4 * a * a)
 
-def check_circle_cv_kernel(c, img, visualize=False, print_score=False):
-    kernel = np.float32(cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2 * c[2] + 1, 2 * c[2] + 1)))
-    kernel[3:-3, 3:-3] -= cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2 * c[2] - 5, 2 * c[2] - 5))
-    kernel[6:-6, 6:-6] -= cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2 * c[2] - 11, 2 * c[2] - 11))
-    res_square = img[c[0]-c[2]:c[0] + c[2] + 1, c[1] - c[2]:c[1]+c[2] + 1] / 255
+def check_circle_cv_kernel(c, img, r, visualize=False, print_score=False):
+    r += 3
+    if c[0] < r or c[1] < r:
+        return False
+    if c[0] + r >= img.shape[0] or c[1] + r >= img.shape[1]:
+        return False
+    kernel = np.float32(cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2 * r + 1, 2 * r + 1)))
+    kernel[(r//4):-(r//4), (r//4):-(r//4)] -= cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2*r+1-r//4-r//4,2*r+1-r//4 - r//4))
+    kernel[(r//2):-(r//2), (r//2):-(r//2)] -= cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(r+2, r+2))
+    res_square = img[c[0]-r:c[0] + r + 1, c[1] - r:c[1]+r + 1] / 255
     if visualize:
         ax1 = plt.subplot(1, 2, 1)
         ax2 = plt.subplot(1, 2, 2)
@@ -37,11 +42,10 @@ def check_circle_cv_kernel(c, img, visualize=False, print_score=False):
     return score > threshold
 
 def hough_circle_fixed_radius(img, r, visualize=False):
-    img8 = np.uint8(img * 255)
     res = np.zeros_like(img)
     n, m = img.shape
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10))
-    course = cv2.dilate(img8, kernel)
+    course = cv2.dilate(img, kernel)
     plt.imshow(course)
     plt.show()
     
@@ -57,7 +61,7 @@ def hough_circle_fixed_radius(img, r, visualize=False):
     circles = []
     for i in tqdm.tqdm(range(0, n)):
         for j in range(0, m):
-            if res[i,j] >= threshold and check_circle_cv_kernel((i, j, r+3), course,visualize=False, print_score=False):
+            if res[i,j] >= threshold and check_circle_cv_kernel((i, j), course, r, visualize=False, print_score=False):
                 circles.append(np.array([i, j]))
     circles_filtered = []
     for circle in circles:
@@ -77,16 +81,15 @@ def hough_circle_fixed_radius(img, r, visualize=False):
     return circles_filtered
 
 
-def get_circles_impl(session_id):
-    r = 12
-    course = np.load(open(f'{session_id}/course_layer.npy', 'rb'))
+def get_circles_impl(session_id, r):
+    course = np.load(open(f'sessions/{session_id}/course_layer.npy', 'rb'))
 
     circles = hough_circle_fixed_radius(course, r)
     res = {'circles': []}
     for elem in circles:
         res['circles'].append({
-            'x': elem[0],
-            'y': elem[1],
-            'r': r,
+            'x': int(elem[0]),
+            'y': int(elem[1]),
+            'r': r
         })
     return res

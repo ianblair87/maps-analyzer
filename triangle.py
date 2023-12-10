@@ -3,13 +3,13 @@ import numpy as np
 import cv2
 
 
-def detect_start(course, visualize=False):
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10))
+def detect_start(course, erode, dilate, visualize=False):
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate,dilate))
     course = cv2.dilate(course, kernel)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15,15))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (erode,erode))
     course = cv2.erode(course, kernel)
     contours,hierarchy = cv2.findContours(course, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    res = np.zeros_like(course)
+    triangles = []
     for cnt in contours:
         approx = cv2.approxPolyDP(cnt, 0.1*cv2.arcLength(cnt, True), True)
         if len(approx) == 3:
@@ -21,24 +21,22 @@ def detect_start(course, visualize=False):
             if not all_sizes_equal:
                 continue
             if visualize:
+                res = np.zeros_like(course)
                 res = cv2.drawContours(res, [cnt], -1, 255, 1)
                 plt.imshow(res)
                 plt.show()
             
-            return {
-                'found': True,
-                'a': approx[0],
-                'b': approx[1],
-                'c': approx[2]
-            }
-    return {
-        'found': False
-    }
+            triangles.append({
+                'a': approx[0].tolist(),
+                'b': approx[1].tolist(),
+                'c': approx[2].tolist()
+            })
+    return triangles
 
-def get_triangle_impl(session_id):
+def get_triangle_impl(session_id, erode, dilate):
     
     # todo: replace with finding a mask with NN
     
-    course = np.load(open(f'{session_id}/course_layer.npy', 'rb'))
+    course = np.load(open(f'sessions/{session_id}/course_layer.npy', 'rb'))
 
-    detect_start(course)
+    return detect_start(course, erode, dilate)
