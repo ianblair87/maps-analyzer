@@ -82,7 +82,7 @@ if uploaded_file is not None:
 
     col1, col2 = st.columns([1, 3])
     with col1:
-        circle_radius = st.slider(f'{session_id}: circle radius', 2, 60, 8, step=2)
+        circle_radius = st.slider(f'{session_id}: circle radius', 1, 59, 9, step=2)
         circle_x = st.slider(f'{session_id}: circle X', circle_radius, img.shape[0]-circle_radius, circle_radius + (img.shape[0] - 2 * circle_radius) // 2)
         circle_y = st.slider(f'{session_id}: circle Y', circle_radius, img.shape[1]-circle_radius, circle_radius + (img.shape[1] - 2 * circle_radius) // 2)
     with col2:
@@ -98,14 +98,24 @@ if uploaded_file is not None:
 
     # detect circles
     col1, col2 = st.columns([1, 3])
-    circles = get_circles(session_id, circle_radius)
+    generate_circles = None
     with col1:
+        candidates_threshold = st.slider(f'{session_id}: candidates threshold', 0, 10 * circle_radius ** 2, int(0.8 * circle_radius ** 2))
+        match_threshold = st.slider(f'{session_id}: match threshold', 0, 10 * circle_radius ** 2, int(0.3 * circle_radius ** 2))
+        generate_circles = st.checkbox('generate circles (slow)')
+        if generate_circles:
+            circles = get_circles(session_id, circle_radius, candidates_threshold, match_threshold)    
+            print(circles)
+            if f'{session_id}: circles' in st.session_state:
+                del st.session_state[f'{session_id}: circles']
+        else:
+            circles = {'circles': []}
         circles = json.loads(st.text_area(f'{session_id}: circles', json.dumps(circles)))
     with col2:
         circles = circles['circles']
         circles_plot = np.zeros_like(course)
         for circle in circles:
-            circles_plot = cv2.circle(circles_plot, (circle['y'], circle['x']), circle['r'], 255, 10)
+            circles_plot = cv2.circle(circles_plot, (circle['y'], circle['x']), circle['r'], 255, 3)
         fig = plt.figure() 
         plt.title("Circles detected")
         light_course = np.float32(course / 2)

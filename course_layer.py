@@ -2,10 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
-def detect_course(session_id):
-    img = cv2.imread(f'sessions/{session_id}/image.jpg')
-    # img = np.array(img)
-    # img8 = np.uint8(img * 255)
+def detect_course_impl(img):
     course = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 #     course = cv2.blur(course, (3, 3))
     lower_pink = np.array([120, 50, 20])
@@ -26,3 +23,7 @@ def detect_course(session_id):
     course = cv2.medianBlur(course, 5)
     
     return course
+
+def detect_course(session_id):
+    img = cv2.imread(f'sessions/{session_id}/image.jpg')
+    return detect_course_impl(img)

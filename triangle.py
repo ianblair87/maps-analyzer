@@ -33,10 +33,10 @@ def detect_start(course, erode, dilate, visualize=False):
             })
     return triangles
 
-def get_triangle_impl(session_id, erode, dilate):
+def get_triangle_impl(session_id, erode_threshold, dilate_threshold):
     
     # todo: replace with finding a mask with NN
     
     course = np.load(open(f'sessions/{session_id}/course_layer.npy', 'rb'))
 
-    return detect_start(course, erode, dilate)
+    return detect_start(course, erode_threshold, dilate_threshold)

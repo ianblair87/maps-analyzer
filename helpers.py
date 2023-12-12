@@ -69,9 +69,9 @@ def get_triangle(session_id, erode, dilate):
 
 @st.cache_data
 # @need_data([get_separated_layers])
-def get_circles(session_id, r):
+def get_circles(session_id, r, candidate_threshold, match_threshold):
     # get_circles based on track_analysis.ipynb
-    return get_circles_impl(session_id, r)
+    return get_circles_impl(session_id, r, candidate_threshold, match_threshold)
 
 @st.cache_data
 # @need_data([get_separated_layers])
