@@ -232,7 +232,42 @@ Two routes are equivalent if they can be continuously modified so one turns into
 To address this problem, it is possible to build Voronoi diagram-like structure, separating each pixel based on the closest obstacle. It would mean that every pixel is now between two obstacles and each path can be classified by sequence of regions. then it is possible to compress each region into a single vertex and find several shortest paths on a new graph. But this is a really challenging task for future work.
 
 
+\newpage
+\appendix
+\section{Appendix}
+\subsection{Figures}
 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{CNN simple model.png}
+    \captionof{figure}{Simple CNN Model}
+    \label{fig:simple-CNN}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{CNN model pooling.png}
+    \captionof{figure}{CNN Model with Pooling}
+    \label{fig:pooling-CNN}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{CNN training loop.png}
+    \captionof{figure}{Model Training Loop}
+    \label{fig:training-loop}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{Predicted mask.png}
+    \captionof{figure}{Predicted Mask from Image}
+    \label{fig:predicted-mask}
+\end{figure}
+  
+
+\newpage
 
 % \nocite{*}
 
