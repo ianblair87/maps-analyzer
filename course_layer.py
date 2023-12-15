@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+import torch
+import torch.nn as nn
 
 def detect_course_impl(img):
     course = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -24,6 +26,45 @@ def detect_course_impl(img):
     
     return course
 
+def detect_course_model(img):
+    class SimpleCNN(nn.Module):
+        def __init__(self):
+            super(SimpleCNN, self).__init__()
+
+            self.features = nn.Sequential(
+                nn.Conv2d(3, 16, kernel_size=5, padding=2),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(16, 1, kernel_size=5, padding=2),
+                nn.Sigmoid()
+            )
+
+            def weights_init(m):
+                if isinstance(m, nn.Conv2d):
+                    torch.nn.init.xavier_uniform_(m.weight)
+                    torch.nn.init.zeros_(m.bias)
+
+            self.features.apply(weights_init)
+            torch.nn.utils.clip_grad_norm_(self.features.parameters(), max_norm=1)
+
+        def forward(self, x):
+            return self.features(x)
+
+
+    # Evaluate the model on test data
+    model = SimpleCNN()
+    model.load_state_dict(torch.load('573-orienteering/layer_separation_model.pth'))
+    model.eval()
+    with torch.no_grad():
+        testing_tensor = torch.tensor(img).permute(2, 0, 1).to(torch.float32)
+        testing_tensor = testing_tensor.unsqueeze(0)
+        outputs = model(testing_tensor)
+        predictions = (outputs > 0.5).float()
+
+        prediction = np.array(predictions[0].squeeze())
+        return prediction
+
+
 def detect_course(session_id):
     img = cv2.imread(f'sessions/{session_id}/image.jpg')
     return detect_course_impl(img)
+
