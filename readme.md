@@ -1,6 +1,6 @@
 #  [Maps analyzer](https://github.com/KiK0S/maps-analyzer)
 
-[data](https://drive.google.com/drive/folders/15UIXN3eHVnJFqlWF3cBCtR7gJdv5027D?usp=sharing)
+[data](https://drive.google.com/drive/folders/15UIXN3eHVnJFqlWF3cBCtR7gJdv5027D?usp=sharing) - should be moved to data directory.
 
 
 Overall idea: orienteering maps analyzer
