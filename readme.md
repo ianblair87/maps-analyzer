@@ -20,9 +20,9 @@ Labelling tool used for creating semantic segmentation dataset is [labelme](http
 We use a convention of class names:
 
 | label | objects |
----
-| water | lakes, rivers, etc |
-| fence | fences that are prohibited to cross |
-| building | buildings that you can't run into |
-| forbidden | any other type of area that is forbidden to run across |
-| course | course-related signs: start, controls, finish |
+|--|--|
+| `water` | lakes, rivers, etc |
+| `fence` | fences that are prohibited to cross |
+| `building` | buildings that you can't run into |
+| `forbidden` | any other type of area that is forbidden to run across |
+| `course` | course-related signs: start, controls, finish |
