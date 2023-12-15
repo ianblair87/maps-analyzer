@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-def get_model():
+def get_model(input_shape=(128,128,3)):
     def downsample_block(x, n_filters):
         x = layers.Conv2D(n_filters, 3, padding = "same", activation = "elu", kernel_initializer = "he_normal")(x)
         f = layers.Conv2D(n_filters, 3, padding = "same", activation = "elu", kernel_initializer = "he_normal")(x)
@@ -16,7 +16,7 @@ def get_model():
         x = layers.Conv2D(n_filters, 3, padding = "same", activation = "elu", kernel_initializer = "he_normal")(x)
         x = layers.Conv2D(n_filters, 3, padding = "same", activation = "elu", kernel_initializer = "he_normal")(x)
         return x
-    inputs = layers.Input(shape=(128,128,3))
+    inputs = layers.Input(shape=input_shape)
     f1, p1 = downsample_block(inputs, 16)
     f2, p2 = downsample_block(p1, 32)
     x = layers.Conv2D(64, 3, padding = "same", activation = "elu", kernel_initializer = "he_normal")(p2)

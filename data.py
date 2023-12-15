@@ -18,6 +18,8 @@ import pickle
 from IPython.display import clear_output
 import albumentations as A
 from datetime import datetime
+import course_layer
+import skimage
 
 
 
@@ -75,7 +77,7 @@ def get_bounding_box(shape):
         v = shape['points'][0]
         v1 = shape['points'][1]
         r = np.linalg.norm([v1[0] - v[0], v1[1] - v[1]])
-        return [v[0] - r, v[1] - r], [v[0] + r, v[1] + r]
+        return [v[0] - r + 5, v[1] - r + 5], [v[0] + r + 5, v[1] + r + 5]
     return None
 
 def detect(x, y, shape):
@@ -135,7 +137,6 @@ class DraftDataset(Dataset):
             print('Processing {0}'.format(img_path))
             img = cv2.imread(img_path)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            self.images.append(img)
             annotation = json.load(open(data_dir + self.labels.iloc[idx, 1]))
             img_shape = img.shape
             mask = np.zeros(shape=(img_shape[0], img_shape[1]))
@@ -149,6 +150,7 @@ class DraftDataset(Dataset):
                     for j in range(int(lb[1] - 1), int(rt[1] + 1)):
                         if detect(i, j, shape):
                             mask[j][i] = float(classnum(shape))
+            self.images.append(img)
             self.masks.append(mask)
             clear_output(wait=True)
         self.X = self.images
@@ -164,7 +166,14 @@ class DraftDataset(Dataset):
         img = self.X[idx]
         mask = self.y[idx]
         return img, mask
-
+    
+    def apply_coursemask(self):
+        for i in tqdm(range(len(self.X))):
+            self.X[i] = course_layer.course_color_mask(self.X[i]).reshape((self.X[i].shape[0], self.X[i].shape[1], 1))
+            while self.X[i].shape[0] > 1500 or self.X[i].shape[1] > 1500:
+                self.X[i] = skimage.measure.block_reduce(self.X[i], (2,2,1), np.max)
+                self.y[i] = skimage.measure.block_reduce(self.y[i], (2,2), np.max)
+            
 
 
 
@@ -186,7 +195,6 @@ class AugmentedDataset(Dataset):
 
 def get_data(size=128):
     dataset = DraftDataset('data/annotations.csv', 'data/')
-
     aug = A.Compose([
         A.RandomCrop(width=size, height=size, p=1),
         A.RandomRotate90(),
@@ -203,6 +211,7 @@ def get_data(size=128):
 
 def get_course_data(size=128):
     dataset = DraftDataset('data/annotations_course.csv', 'data/', 'X_course.data', 'y_course.data')
+    dataset.apply_coursemask()
 
     aug = A.Compose([
         A.RandomCrop(width=size, height=size, p=1),
