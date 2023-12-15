@@ -2,6 +2,7 @@ from quadtree import find_node
 import heapq
 import numpy as np
 import cv2
+import tqdm
 
 def astar(g, start, finish):
     def findist(x, y, finish):
@@ -63,7 +64,7 @@ def a_star_quadtree(c1, c2, tree, graph):
 
 def get_best_routes(runnable, tree, graph, legs):
     res = np.zeros((tree.root.r, tree.root.b, 3), dtype=np.float64)
-    for fr, to in legs:
+    for fr, to in tqdm.tqdm(legs):
         pre = astar(runnable, fr, to)
         # n1, n2, pre = a_star_quadtree((fr[0], fr[1]), (to[0], to[1]), tree, graph)
         # node = n2
@@ -72,5 +73,5 @@ def get_best_routes(runnable, tree, graph, legs):
             a = cur
             cur = pre[cur]
             b = cur
-            cv2.line(res, (int(a[1]), int(a[0])), (int(b[1]), int(b[0])), (0.1, 0.7, 0.2), 10)
+            cv2.line(res, (int(a[1]), int(a[0])), (int(b[1]), int(b[0])), (0.4, 1.0, 0.7), 3)
     return res

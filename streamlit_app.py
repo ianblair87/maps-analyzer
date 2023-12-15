@@ -158,7 +158,7 @@ if uploaded_file is not None:
     print(legs)
     get_routes(session_id, legs)
     routes = np.load(f'sessions/{session_id}/routes_map.npy')
-    map_with_routes = (img / 255 + routes) / 2
+    map_with_routes = (img / 255 * 0.8 + routes * 0.2)
     print(img.max())
     print(routes.max())
     print(img.shape)

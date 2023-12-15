@@ -4,7 +4,7 @@ import numpy as np
 from triangle import get_triangle_impl
 from course_layer import detect_course
 from runnable_layer import get_runnable_layer
-from circles import get_circles_impl
+from circles import get_circles_impl, hough_circle_precalculation
 from quadtree import build_quadtree, build_graph_from_quadtree, quadtree_dist_matrix, get_best_permutation
 from route_solver import get_best_routes
 import pickle
@@ -68,9 +68,14 @@ def get_triangle(session_id, erode, dilate):
     return get_triangle_impl(session_id, erode, dilate)
 
 @st.cache_data
+def get_circles_precalc(session_id, r):
+    return hough_circle_precalculation(session_id, r)
+
+@st.cache_data
 # @need_data([get_separated_layers])
 def get_circles(session_id, r, candidate_threshold, match_threshold):
     # get_circles based on track_analysis.ipynb
+    get_circles_precalc(session_id, r)
     return get_circles_impl(session_id, r, candidate_threshold, match_threshold)
 
 @st.cache_data
