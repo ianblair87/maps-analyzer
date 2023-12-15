@@ -133,38 +133,36 @@ if uploaded_file is not None:
     build_course_quadtree_graph(session_id)
     build_course_distance_matrix(session_id, points)
     
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        permutation = json.loads(st.text_area(f'{session_id}: permutation', json.dumps(get_circuit_permutation(session_id, points))))
-    with col2:
-        fig = plt.figure() 
-        configuration = np.zeros((img.shape[0],img.shape[1],1), np.uint8)
-        for circle in circles:
-            cv2.circle(configuration, (circle['y'],circle['x']),12,255,10)
-        for triangle in triangles:
-            contours = np.array([[triangle['a'], triangle['b'], triangle['c']]], dtype=np.int32)
-            triangle_plot = cv2.drawContours(configuration, contours, -1, 255, 3)
-        for i in range(len(permutation) - 1):
-            cv2.line(configuration, (points[permutation[i]][1], points[permutation[i]][0]), ((points[permutation[(i+1)%len(permutation)]][1], points[permutation[(i+1)%len(permutation)]][0])), 255, 10)
+    if len(points) < 2 or len(circles) == 0:
+        st.warning('There are not enough points to run futher')
+    else:
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            permutation = json.loads(st.text_area(f'{session_id}: permutation', json.dumps(get_circuit_permutation(session_id, points))))
+        with col2:
+            fig = plt.figure() 
+            configuration = np.zeros((img.shape[0],img.shape[1],1), np.uint8)
+            for circle in circles:
+                cv2.circle(configuration, (circle['y'],circle['x']),12,255,10)
+            for triangle in triangles:
+                contours = np.array([[triangle['a'], triangle['b'], triangle['c']]], dtype=np.int32)
+                triangle_plot = cv2.drawContours(configuration, contours, -1, 255, 3)
+            for i in range(len(permutation) - 1):
+                cv2.line(configuration, (points[permutation[i]][1], points[permutation[i]][0]), ((points[permutation[(i+1)%len(permutation)]][1], points[permutation[(i+1)%len(permutation)]][0])), 255, 10)
 
-        plt.imshow(configuration + light_course.reshape((img.shape[0], img.shape[1], 1)), cmap='gray')
+            plt.imshow(configuration + light_course.reshape((img.shape[0], img.shape[1], 1)), cmap='gray')
+            fig_html = mpld3.fig_to_html(fig)
+            components.html(fig_html, height=600)
+        
+        build_runnable_quadtree_graph(session_id)
+        legs = []
+        for i in range(len(permutation)-1):
+            legs.append((points[permutation[i]], points[permutation[(i+1)]]))
+        get_routes(session_id, legs)
+        routes = np.load(f'sessions/{session_id}/routes_map.npy')
+        map_with_routes = (img / 255 * 0.8 + routes * 0.2)
+        fig = plt.figure() 
+        plt.imshow(map_with_routes)
         fig_html = mpld3.fig_to_html(fig)
         components.html(fig_html, height=600)
-    
-    build_runnable_quadtree_graph(session_id)
-    legs = []
-    for i in range(len(permutation)-1):
-        legs.append((points[permutation[i]], points[permutation[(i+1)]]))
-    print(legs)
-    get_routes(session_id, legs)
-    routes = np.load(f'sessions/{session_id}/routes_map.npy')
-    map_with_routes = (img / 255 * 0.8 + routes * 0.2)
-    print(img.max())
-    print(routes.max())
-    print(img.shape)
-    print(routes.shape)
-    fig = plt.figure() 
-    plt.imshow(map_with_routes)
-    fig_html = mpld3.fig_to_html(fig)
-    components.html(fig_html, height=600)
     
