@@ -30,6 +30,8 @@ def classnum(shape):
         return 1
     if shape['label'] == 'water':
         return 1
+    if shape['label'] == 'course':
+        return 1
     return 1
 
 def vec(x0, y0, x1, y1):
@@ -114,18 +116,16 @@ def detect(x, y, shape):
     return False
 
 class DraftDataset(Dataset):
-    def __init__(self, annotations_file, data_dir, transform=None, target_transform=None):
+    def __init__(self, annotations_file, data_dir, X_filename='X.data', y_filename='y.data'):
         self.labels = pd.read_csv(annotations_file)
         self.img_dir = data_dir
-        self.transform = transform
-        self.target_transform = target_transform
         self.length = self.labels.shape[0]
-        self.size = 100
         self.images = []
-        self.annotations = []
-        if os.path.isfile('data/X.data') and os.path.isfile('data/y.data'):
-            self.X = pickle.load(open('data/X.data', 'rb'))
-            self.y = pickle.load(open('data/y.data', 'rb'))
+        X_path = data_dir + X_filename
+        y_path = data_dir + y_filename
+        if os.path.isfile(X_path) and os.path.isfile(y_path):
+            self.X = pickle.load(open(X_path, 'rb'))
+            self.y = pickle.load(open(y_path, 'rb'))
             return
         self.masks = []
         self.masks_processed = []
@@ -133,12 +133,10 @@ class DraftDataset(Dataset):
             assert idx < len(self.labels)
             img_path = os.path.join(self.img_dir, self.labels.iloc[idx, 0])
             print('Processing {0}'.format(img_path))
-            pic = cv2.imread(img_path)
-            b, g, r = cv2.split(pic) # по умолчанию cv2 почему-то отдает цвета в порядке BGR вместо RGB
-            self.images.append(cv2.merge([r, g, b]))
-            self.annotations.append(json.load(open(data_dir + self.labels.iloc[idx, 0].split('.')[0] + '.json', 'r')))
-            img = self.images[-1]
-            annotation = self.annotations[-1]
+            img = cv2.imread(img_path)
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            self.images.append(img)
+            annotation = json.load(open(data_dir + self.labels.iloc[idx, 1]))
             img_shape = img.shape
             mask = np.zeros(shape=(img_shape[0], img_shape[1]))
             for shape in annotation['shapes']:
@@ -152,12 +150,11 @@ class DraftDataset(Dataset):
                         if detect(i, j, shape):
                             mask[j][i] = float(classnum(shape))
             self.masks.append(mask)
-            print('Saving')
             clear_output(wait=True)
         self.X = self.images
         self.y = self.masks
-        pickle.dump(self.y, open('data/y.data', 'wb'))
-        pickle.dump(self.X, open('data/X.data', 'wb'))
+        pickle.dump(self.y, open(y_path, 'wb'))
+        pickle.dump(self.X, open(X_path, 'wb'))
     
     def __len__(self):
         return self.length
@@ -189,6 +186,23 @@ class AugmentedDataset(Dataset):
 
 def get_data(size=128):
     dataset = DraftDataset('data/annotations.csv', 'data/')
+
+    aug = A.Compose([
+        A.RandomCrop(width=size, height=size, p=1),
+        A.RandomRotate90(),
+        A.Flip(),
+        A.Transpose(),
+        A.GaussNoise(p=.2),
+        A.OneOf([
+            A.CLAHE(clip_limit=2),
+            A.RandomBrightnessContrast(),            
+        ], p=0.3),  
+    ])
+    data = AugmentedDataset(dataset, aug)
+    return data
+
+def get_course_data(size=128):
+    dataset = DraftDataset('data/annotations_course.csv', 'data/', 'X_course.data', 'y_course.data')
 
     aug = A.Compose([
         A.RandomCrop(width=size, height=size, p=1),

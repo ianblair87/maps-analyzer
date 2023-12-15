@@ -1,28 +1,28 @@
-filename
-MosVesna_2021_1_cont1_crop.jpg
-MosVesna_2021_2_cont1_crop.jpg
-MosVesna_2021_3_cont1_crop.jpg
-MosVesna_2021_4_cont1_crop.jpg
-MosVesna_2021_5_cont1_crop.jpg
-MosVesna_2021_6_cont1_crop.jpg
-MosVesna_2021_7_cont1_crop.jpg
-MosVesna_2021_8_cont1_crop.jpg
-MosVesna_2021_9_cont1_crop.jpg
-MosVesna_2021_10_cont1_crop.jpg
-MosVesna_2021_x_cont1_crop.jpg
-MosVesna_2021_xx_cont1_crop.jpg
-карта 1_1.jpg
-карта 2_1.jpg
-карта 3_1.jpg
-карта 4_1.jpg
-карта 5.png
-карта 6.png
-карта 7.png
-карта 8.png
-карта 9.png
-карта 10.png
-карта 11.jpg
-карта 12.jpg
-карта 13.jpg
-карта 14.jpg
-карта 15.png
+filename,annotation_file
+MosVesna_2021_1_cont1_crop.jpg,MosVesna_2021_1_cont1_crop.json
+MosVesna_2021_2_cont1_crop.jpg,MosVesna_2021_2_cont1_crop.json
+MosVesna_2021_3_cont1_crop.jpg,MosVesna_2021_3_cont1_crop.json
+MosVesna_2021_4_cont1_crop.jpg,MosVesna_2021_4_cont1_crop.json
+MosVesna_2021_5_cont1_crop.jpg,MosVesna_2021_5_cont1_crop.json
+MosVesna_2021_6_cont1_crop.jpg,MosVesna_2021_6_cont1_crop.json
+MosVesna_2021_7_cont1_crop.jpg,MosVesna_2021_7_cont1_crop.json
+MosVesna_2021_8_cont1_crop.jpg,MosVesna_2021_8_cont1_crop.json
+MosVesna_2021_9_cont1_crop.jpg,MosVesna_2021_9_cont1_crop.json
+MosVesna_2021_10_cont1_crop.jpg,MosVesna_2021_10_cont1_crop.json
+MosVesna_2021_x_cont1_crop.jpg,MosVesna_2021_x_cont1_crop.json
+MosVesna_2021_xx_cont1_crop.jpg,MosVesna_2021_xx_cont1_crop.json
+карта 1_1.jpg,карта 1_1.json
+карта 2_1.jpg,карта 2_1.json
+карта 3_1.jpg,карта 3_1.json
+карта 4_1.jpg,карта 4_1.json
+карта 5.png,карта 5.json
+карта 6.png,карта 6.json
+карта 7.png,карта 7.json
+карта 8.png,карта 8.json
+карта 9.png,карта 9.json
+карта 10.png,карта 10.json
+карта 11.jpg,карта 11.json
+карта 12.jpg,карта 12.json
+карта 13.jpg,карта 13.json
+карта 14.jpg,карта 14.json
+карта 15.png,карта 15.json

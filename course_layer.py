@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import torch
 import torch.nn as nn
+from unet import get_model
 
 def detect_course_impl(img):
     course = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -63,6 +64,25 @@ def detect_course_model(img):
         prediction = np.array(predictions[0].squeeze())
         return prediction
 
+
+def detect_course_unet(img):
+    model = get_model()
+    model.load_weights('checkpoints/unet_course')
+    res = np.zeros((img.shape[0], img.shape[1], 1), dtype=np.float64)
+    for i in range(0, img.shape[0], 128):
+        for j in range(0, img.shape[1], 128):
+            if i + 128 > img.shape[0]:
+                i = img.shape[0] - 128
+            if j + 128 > img.shape[1]:
+                j = img.shape[1] - 128
+            res[i:i+128,j:j+128] = model.predict(np.float64(img[i:i+128,j:j+128]).reshape(-1, 128, 128, 3) / 255)[0]
+    _, res = cv2.threshold(res, 0.1, 1.0, cv2.THRESH_BINARY)
+    res = np.uint8(res)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5))
+    res = cv2.dilate(res, kernel)
+    res = cv2.medianBlur(res, 5)
+    
+    return res
 
 def detect_course(session_id):
     img = cv2.imread(f'sessions/{session_id}/image.jpg')
