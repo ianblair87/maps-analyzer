@@ -38,7 +38,7 @@
 \geometry{right=1.5cm}% правое поле
 \geometry{top=1.5cm}% верхнее поле
 \geometry{bottom=1.5cm}% нижнее поле
-\renewcommand{\baselinestretch}{1.2} % междустрочный интервал
+\renewcommand{\baselinestretch}{1.15} % междустрочный интервал
 \RequirePackage{float}                
 
 \renewcommand{\theenumi}{\arabic{enumi}.}% Меняем везде перечисления на цифра.цифра
@@ -54,8 +54,29 @@
 \Crefname{figure}{Fig.}{Fig. }
 % \crefname{table}{табл.}{табл. }
 % \Crefname{table}{Табл.}{Табл. }
+\newcommand{\HRule}[1]{\rule{\linewidth}{#1}}
+
+
 
 \begin{document}
+
+\title{ \normalsize \textsc{INF-573}
+		\\ [2.0cm]
+		\HRule{0.5pt} \\
+		\LARGE \textbf{\uppercase{Orienteering Map Analysis}}
+		\HRule{2pt} \\ [0.5cm]
+		\normalsize \today \vspace*{5\baselineskip}}
+
+\date{}
+
+\author{
+		Konstantin Amelichev \\ 
+		Ian Blair \\
+        MScT, AI \& AVC, Ecole Polytechnique}
+
+\maketitle
+\newpage
+
 
 \section{Introduction to the problem}
 
@@ -110,7 +131,7 @@ The image itself is a simple scheme with all kinds of shapes and colors, where a
 The problem with the data is the fact that objects are not real-life objects, so pretrained computer vision models are not useful for us.
 Overall, the structure of image is based on some set of rules, that are hard to express in a formal way.
 These rules are hard to learn artificially, because there are same colors used for different types of things, and objects are not consistent in terms of forms and shapes.
-Also, there are connections between objects, that are really hard to find in general case (\cref{mapsample}).
+Also, there are connections between objects, that are really hard to find in general case (\cref{fig:mapsample}).
 
 We decided that the best approach we have is to solve a semantic segmentation problem.
 Indeed, label of a pixel is mostly based on its color, generic form of shape it belongs to, and surrounding objects, so the detection problem is local and can be solved using $128 \times 128$ patches of a map.
@@ -155,7 +176,9 @@ Our reasoning for the current state of the model was that it should have already
 
 \subparagraph{Training the model\\}
 Using the images and masks that we had created, we made tensors which could be fed into pyTorch data loaders \cite{pytorch}.
-This involved creating random crops of the masks and images. One problem we had to overcome, which turned out to be relatively simple, was ensuring that the random crops were of the same section for the images and corresponding masks. With our training and validation data loaders, we were able to train the model in the corresponding fashion (\cref{fig:training-loop}). With our model fully trained, we were able to test it on a testing set that was filled with maps with layers on top. While it did produce great results on maps where the layers to be removed were the only ones of that color, since the model was essentially just detecting the colors of the layers it produced a decent amount of noise on non-ideal maps. Before attempting to modify the model to only separate circles/lines, we thought that we would be able to remove the noise in order to isolate the intended figures for the later circle detection algorithm. However, as we discovered the main problem was not removing noise, which did not really hinder the way we detected the circles, but rather the presence of larger figures like pink areas on the map or the numerical labels of the circles. 
+This involved creating random crops of the masks and images. One problem we had to overcome, which turned out to be relatively simple, was ensuring that the random crops were of the same section for the images and corresponding masks. With our training and validation data loaders, we were able to train the model in the corresponding fashion (\cref{fig:training-loop}).
+With our model fully trained, we were able to test it on a testing set that was filled with maps with layers on top.
+While it did produce great results on maps where the layers to be removed were the only ones of that color, since the model was essentially just detecting the colors of the layers it produced a decent amount of noise on non-ideal maps. Before attempting to modify the model to only separate circles/lines, we thought that we would be able to remove the noise in order to isolate the intended figures for the later circle detection algorithm. However, as we discovered the main problem was not removing noise, which did not really hinder the way we detected the circles, but rather the presence of larger figures like pink areas on the map or the numerical labels of the circles. 
 
 \subsubsection{U-Net for detecting obstacle layer}
 
@@ -164,7 +187,7 @@ The problem with results was the same: if model doesn't use pooling, it can't ex
 If it has pooling, than it has hard time recovering label for specific pixel during upsample stage.
 
 Then we tried U-Net \cite{unet}. Advantage of the U-Net is its ability to have a context of real pixel values and look at the high-level descriptors as well.
-So we created a compact version of U-Net that takes 10 minutes to train, weights less than a megabyte and works relatively well.
+So we created a compact version of U-Net with just two layers that takes 10 minutes to train, weights less than a megabyte and works relatively well (\cref{fig:unetrunnable}).
 
 The implementation is based on keras with tensorflow \cite{keras}, we also used albumentations \cite{albumentations} package to augment the dataset.
 
@@ -176,11 +199,11 @@ Initially, it struggled to extrapolate its knowledge, and while it produced grea
 After experiments we found out that it relied on the image dimension. So we used maxpooling to downsample high-resolution image.
 Also it had a hard time understanding different colormaps so we retrained it on the output of our baseline model, that basically produces <<the red layer>>. 
 
-Suprisingly, after these two changes results became great (\cref{unetcircuitresult})
+Suprisingly, after these two changes results became great (\cref{fig:unetcoursedetection})
 
 \subsection{Detection of course configuration}
 
-Course configuration consists of triangle, which is a start, set of circles, that represent controls, and lines that are used for connection (\cref{examplecircuit}).
+Course configuration consists of triangle, which is a start, set of circles, that represent controls, and lines that are used for connection (\cref{fig:examplecircuit}).
 In general, there are many possibilities for race rules, that may result in map having several start points, more than two connections for a control or even no connections at all.
 We decomposed our detection process the way that shapes detection is separated from connecting objects so intermediate data might still be useful.
 Consiedring connections between controls, there are many challenges and modes to consider for every single race type.
@@ -194,15 +217,13 @@ To find it, we need to address the challenge of a noise in the data.
 In general, openCV provides a way to find a custom polygon \cite{findcontours}
 The problem with the method is that it expects polygon to be filled, when triangle from our dataset only has contours.
 Not only the triangle has contours, but it also has adjacent line, so using default algorithm is not an option.
-Our algorithm uses dilation and erosion to remove noise around the triangle and keep only the pixels inside of a contour:
+Our algorithm (\cref{fig:triangledetection}) uses dilation and erosion to remove noise around the triangle and keep only the pixels inside of a contour:
 \begin{enumerate}
     \item Image is dilated by $d$ pixels, where $d$ is a hyperparameter that equals $0.3-0.5$ of expected triangle size.
     \item After the dilation, triangle becomes solid, and all adjacent lines are not wider than $w + 2 * d$, where $w$ is an initial width of lines
     \item At the same time, the contour of triangle already has $d + w$ outside pixels. Now we do erosion for $e$ pixels and delete the lines and noise, keeping the inside of the triangle untouched for openCV detector. $e \approx d + \frac{w}{2} + \epsilon$
     \item Now we select polygons using openCV detector and filter those that are equilateral triangles.
 \end{enumerate}
-
-The issue we found with the algorithm is that it is dependent on two hyperparameters $d$ and $e$.
 
 \subsubsection{Algorithm for circle detection}
 
@@ -211,17 +232,15 @@ The problem with this method is that it detects all circles, not only ones with 
 Also during our experiments we found it hard to tune its hyperparameters and algorithm provides a lot of false positives that need to be filtered out, so the overall pipeline is messy and does not generalize well.
 As with triangles, additional challenge was that circles are corrupted and they have adjacent lines as well.
 
-Our algorithm works as following:
+Our algorithm (\cref{fig:circledetection}) works as following:
 \begin{enumerate}
     \item For every pixel that is labelled as a part of circuit layer, we add $+1$ to all pixels that are distance $r$ away from it.
     \item Then we select pixels that have an accumulated sum bigger than $candidate\_threshold$. It means this pixel has a lot of information in its r-neibourhood and we need to check it.
-    \item For every candidate circle center we take $2r \times 2r$ region and try to understand if it is a circle or not. it might be a solid surface, corner of rectangle or something else. To do so, we create a special $2r \times 2r$ kernel \cref{fig:circlekernel}, that has a lot of 1's on the circle border and a lot of -1's near the center.
+    \item For every candidate circle center we take $2r \times 2r$ region and try to understand if it is a circle or not. it might be a solid surface, corner of rectangle or something else. To do so, we create a special $2r \times 2r$ kernel (\cref{fig:circlekernel}), that has a lot of 1's on the circle border and a lot of -1's near the center.
     \item When we take a sum of pointwise multiplications we get a total $score = border\_pixels - inside\_pixels$, because of the kernel structure.
     \item We concider circle present in the layer if $score > match\_threshold$.
     \item If circle has a high score, we filter out all the circles in its $r$-neighborhood, so we dont face problem with duplications. 
 \end{enumerate}
-
-Our algorithm has 3 hyperparameters: $r$, $candidate\_threshold$, $match\_threshol$.
 
 \subsubsection{Algorithm for configuration detection}
 
@@ -250,18 +269,21 @@ Then we find a shortest path using $A^*$ \cite{astar}, that would try its best t
 
 After we initially developed this algorithm, we faced the fact it is extremely slow when it needs to find pairwise score for 20-30 circles.
 To address this issue, we compressed the graph: we've built quadtree \cite{quadtree} on top of the circuit layer, where a node becomes a leaf, if all underlying region has the same pixel type.
-Because of this structure, we compress big parts of a map, that have no useful information.
+Because of this structure, we compress big parts of a map, that have no useful information (\cref{fig:quadtree}).
 It made the scoring algorithm approximately 40 times faster for our use case.
 
 \subsection{Shortest path analysis}
 
-Having obstacles labelled, we just had to run $A^*$ algorithm \cite{astar} on a pixel grid with euclidean distance, where pixels, that are labelled as obstacles, are forbidden to go through.
+Having obstacles labelled, we just had to run $A^*$ algorithm \cite{astar} on a pixel grid with euclidean distance, where pixels, that are labelled as obstacles, are forbidden to go through (\cref{fig:astar}).
 
 \section{Result: a Streamlit-based web application}
 
 There are many steps of the pipeline where something can go wrong, so as we were doing proof-of-concept application, we made a web application that allowed us to modify hyperparameters interactively and correct output of detectors if they are mistaken.
 We use sliders and text inputs instead of draggable web components that could be done by skilled web developer and Javascript guru.
 Creation of a good web interface is an important and challenging task to do in the future, but it is not related to the content of INF-573.
+
+All steps of pipeline are working and it is possible to create an analysis of the whole map: there is a need to tweak parameters with sliders a little and sometimes filter out false positives, but it creates pretty nice results overall (\cref{fig:streamlit}).
+The most problematic part of pipeline right now is detection of runnable layers, because sometimes there are narrow areas between two buildings that are merged together and thus algorithm considers the path blocked. 
 
 Application was built on top of Streamlit \cite{streamlit} framework which allows to use Python for creating simple interactive websites with the help of mpld3 \cite{mpld3} library, that allowed to draw matplotlib figures on the website.
 
@@ -292,6 +314,12 @@ We are leaving this task to future ourselves or those who will continue our work
 
 \begin{figure}[H]
     \centering
+    \includegraphics[width=200pt]{hard_configuration.png}
+    \captionof{figure}{Example of non-trivial configuration with two laps.}
+    \label{fig:mapsample}
+\end{figure}
+\begin{figure}[H]
+    \centering
     \includegraphics[width=\linewidth]{CNN simple model.png}
     \captionof{figure}{Simple CNN Model}
     \label{fig:simple-CNN}
@@ -304,9 +332,9 @@ We are leaving this task to future ourselves or those who will continue our work
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{CNN training loop.png}
+    \includegraphics[width=400pt]{CNN training loop.png}
     \captionof{figure}{Model Training Loop}
-    \label{fig:training-CNN}
+    \label{fig:training-loop}
 \end{figure}
 \begin{figure}[H]
     \centering
@@ -316,9 +344,62 @@ We are leaving this task to future ourselves or those who will continue our work
 \end{figure}
 \begin{figure}[H]
     \centering
+    \includegraphics[width=\linewidth]{unet_runnable.png}
+    \captionof{figure}{Map samples, target, and U-Net predicted masks.}
+    \label{fig:unetrunnable}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=200pt]{unet_course_detection_input.png}
+    \includegraphics[width=200pt]{unet_course_detection.png}
+    \captionof{figure}{Data given to U-Net and detected circuit layer.}
+    \label{fig:unetcoursedetection}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=200pt]{sample_circuit_configuration.png}
+    \captionof{figure}{Example of circuit configuration.}
+    \label{fig:examplecircuit}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=200pt]{triangle_detection.png}
+    \captionof{figure}{Example of triangle detection: initial map, circuit layer after dilation and erosion, and detected triangle.}
+    \label{fig:triangledetection}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{circle_detection.png}
+    \captionof{figure}{Example of circle detection.}
+    \label{fig:circledetection}
+\end{figure}
+\begin{figure}[H]
+    \centering
     \includegraphics[width=\linewidth]{circle_kernel.png}
     \captionof{figure}{Patch for circle detection and circle kernel.}
     \label{fig:circlekernel}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=300pt]{quadtree_circuit.png}
+    \includegraphics[width=300pt]{quadtree_graph.png}
+    \captionof{figure}{Quadtree-based circuit (vertices are drawn as squares) and quadtree-based graph.}
+    \label{fig:quadtree}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=200pt]{astar.png}
+    \captionof{figure}{Example of a path found with $A^*$}
+    \label{fig:astar}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=300pt]{streamlit_triangle.png}
+    \includegraphics[width=300pt]{streamlit_circles.png}
+    \includegraphics[width=150pt]{streamlit_path.png}
+    \captionof{figure}{Streamlit application. Detection of layers, triangles, circles, configuration and paths, with widgets to tweak intermediate results.}
+    \label{fig:streamlit}
 \end{figure}
 
 
