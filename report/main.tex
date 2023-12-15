@@ -116,42 +116,30 @@ To create a mask out of the json description of a shape border, following algori
 \end{enumerate}
 
 
-\subsubsection{Detection of course layer}
+\subsubsection{CNN for detecting non-runnable layer}
+\subparagraph{Motivation for the model\\}
 
-To try and outperform the naive implementation, we developed and trained a CNN to detect the unrunable layers, e.g the layers that notated where the start/end points of a track lied, the connections between tracks, and the labels for each track.
+To try and outperform the naive implementation, we developed and trained a CNN to detect the non-runnable layers, e.g the layers that notated where the start/end points of a track lied, the connections between tracks, and the labels for each track.
 The motivation for creating this CNN was that we could not be sure that a naive implementation of removing layers based on color alone would work well, and we hoped that a simple CNN could detect connected circles, triangles, and lines of the same color and thickness in order to remove them from the final map. 
 
-In order to train the CNN with a limited dataset, we took maps without extra layers, in other words maps that were ready for path detection, and added layers on top of them so that we could have ample training and validation sets.
-This included drawing a random number of circles, lines, and text using cv2 functions, ensuring that the locations of the circles were spread out and the lines connected the circles, and using a variety of colors (though uniform per training image).
-All in all it was fairly simple and allowed us to produce however many training/validation images as we wanted.
+\subparagraph{Creating training and validation sets with masks\\}
 
-To produce the masks for the training and validation sets, all that needed to be done was feed in the color that was used to create the figures on the training/validation images into a function that took a “bitwise and” of the image and a mask of that color.
-Then just converting the mask to black and white produced good results.
+In order to train the CNN with a limited data-set, we took maps without extra layers, in other words maps that were ready for path detection, and added layers on top of them so that we could have ample training and validation sets. This included drawing a random number of circles, lines, and text using cv2 functions, ensuring that the locations of the circles were spread out and the lines connected the circles, and using a variety of colors (though uniform per training image). All in all it was fairly simple and allowed us to produce however many training/validation images as we wanted. To produce the masks for the training and validation sets, all that needed to be done was feed in the color that was used to create the figures on the training/validation images into a function that took a “bitwise and” of the image and a mask of that color. Then just converting the mask to black and white produced good results.
 
-We created a simple CNN model with 2 convolution layers and no pooling layers, figuring that all the CNN would really do is learn the intended colors to remove, since the figures to be removed were uniformly colored.
-The model would take in a colored 200x200 random segment of each colored image, and output a black/white mask as intended.
-For the model we experimented with different loss functions, and decided on Binary Cross Entropy loss, which is used commonly for binary classification tasks.
-For the optimizer, we learned that the Adam optimizer produced results similar to though more effective than Stochastic Gradient Descent, and ran with that.
+\subparagraph{Creating the CNN model\\}
+We created a simple CNN model \ref{fig:simple-CNN} with 2 convolution layers and no pooling layers, figuring that all the CNN would really do is learn the intended colors to remove, since the figures to be removed were uniformly colored. The model would take in a colored 200x200 random segment of each colored image, and output a black/white mask as intended. For the model we experimented with different loss functions, and decided on Binary Cross Entropy loss, which is used commonly for binary classification tasks. For the optimizer, we learned that the Adam optimizer produced results similar to though more effective than Stochastic Gradient Descent, and ran with that.
 
+
+
+\subparagraph{Problems with the model\\}
 Eventually we realized that for the task of circle detection we needed the model to do more than just separate the layers based on color.
 There were often parts of the map that were the same color as the layers we intended to remove, and we didn't want to segment them in the layer detection model.
-This was because the circle detection was much less effective if there were layers interrupting the circles.
-So we attempted to reconfigure the model to ideally just identify the circles and lines, ignoring other figures like labels of the circles and other figures in the map (areas that were out of bounds often were colored the same as the circles/lines).
-Our reasoning for the current state of the model was that it should have already been able to do more than simple color identification, if we just modified the training masks to only include the lines and circles.
-We did this and also attempted to incorporate max pooling which should have made line detection easier.
-Unfortunately this model did not produce good results, and we were ultimately unable to use it.
+This was because the circle detection was much less effective if there were layers interrupting the circles. So we attempted to reconfigure the model to ideally just identify the circles and lines, ignoring other figures like labels of the circles and other figures in the map (areas that were out of bounds often were colored the same as the circles/lines).
+Our reasoning for the current state of the model was that it should have already been able to do more than simple color identification, if we just modified the training masks to only include the lines and circles. We did this and also attempted to incorporate max pooling which should have made line detection easier. Unfortunately this model \ref{fig:pooling-CNN} did not produce adequate results, and we were ultimately unable to use it.
 
-Using the images and masks that we had created, we made tensors which could be fed into pyTorch data loaders.
-This involved creating random crops of the masks and images.
-One problem we had to overcome, which turned out to be relatively simple, was ensuring that the random crops were of the same section for the images and corresponding masks.
-With our training and validation data loaders, we were able to train the model in the corresponding fashion.
 
-Our number of epochs was higher than we would have liked, but we did get our average validation below 0.5 so we were fine with waiting for the model to finish training.
-
-With our model fully trained, we were able to test it on a testing set that was filled with maps with layers on top.
-While it did produce great results on maps where the layers to be removed were the only ones of that color, since the model was essentially just detecting the colors of the layers it produced a decent amount of noise on non-ideal maps.
-Before attempting to modify the model to only separate circles/lines, we thought that we would be able to remove the noise in order to isolate the intended figures for the later circle detection algorithm.
-However, as we discovered the main problem wasn’t removing noise, which did not really hinder the way we detected the circles, but rather the presence of larger figures like pink areas on the map or the numerical labels of the circles. 
+\subparagraph{Training the model\\}
+Using the images and masks that we had created, we made tensors which could be fed into pyTorch data loaders. This involved creating random crops of the masks and images. One problem we had to overcome, which turned out to be relatively simple, was ensuring that the random crops were of the same section for the images and corresponding masks. With our training and validation data loaders, we were able to train the model in the corresponding fashion \ref{fig:training-loop}. With our model fully trained, we were able to test it on a testing set that was filled with maps with layers on top. While it did produce great results on maps where the layers to be removed were the only ones of that color, since the model was essentially just detecting the colors of the layers it produced a decent amount of noise on non-ideal maps. Before attempting to modify the model to only separate circles/lines, we thought that we would be able to remove the noise in order to isolate the intended figures for the later circle detection algorithm. However, as we discovered the main problem was not removing noise, which did not really hinder the way we detected the circles, but rather the presence of larger figures like pink areas on the map or the numerical labels of the circles. 
 
 \subsubsection{Detection of runnable layer}
 
