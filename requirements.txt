@@ -1,0 +1,16 @@
+labelme
+torch
+keras
+tensorflow
+opencv-python
+numpy
+tqdm
+matplotlib
+torchvision
+pandas
+Pillow
+pickle
+albumentations
+skimage
+mpld3
+ipykernel
