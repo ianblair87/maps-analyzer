@@ -38,7 +38,7 @@
 \geometry{right=1.5cm}% правое поле
 \geometry{top=1.5cm}% верхнее поле
 \geometry{bottom=1.5cm}% нижнее поле
-\renewcommand{\baselinestretch}{1.25} % междустрочный интервал
+\renewcommand{\baselinestretch}{1.2} % междустрочный интервал
 \RequirePackage{float}                
 
 \renewcommand{\theenumi}{\arabic{enumi}.}% Меняем везде перечисления на цифра.цифра
@@ -50,8 +50,8 @@
 
 % \crefname{section}{глава}{глава }
 % \Crefname{section}{Глава}{Глава }
-% \crefname{figure}{рис.}{рис. }
-% \Crefname{figure}{Рис.}{Рис. }
+\crefname{figure}{fig.}{fig. }
+\Crefname{figure}{Fig.}{Fig. }
 % \crefname{table}{табл.}{табл. }
 % \Crefname{table}{Табл.}{Табл. }
 
@@ -76,8 +76,6 @@ algorithm to find multiple different optimal paths as well.
 \subsection{Related applications and technologies}
 
 \begin{enumerate}
-    \item Strava \cite{strava} is a social network for runners that allows uploading your own gps routes and put a map underneath them.
-While it is helpful, it does not solve the route problem, it only helps with visualisation.
     \item Livelox \cite{livelox} is a website created for orienteering competitions, where jury can upload map with distance configuration, and athletes can upload their GPS tracks.
 The data used by organisers is private. 
     \item The maps and courses are usually created with specific software such as OCAD \cite{ocad} and openorienteering \cite{openorienteering}. 
@@ -98,8 +96,8 @@ Overall, the developed pipeline is the following:
 \begin{enumerate}
 \item Extraction of circuit (\textit{course, race configuration}) layer with U-Net model \cite{unet}
 \item Extraction of obstacles (\textit{lakes, buildings, fences, etc}) with U-Net model \cite{unet}
-\item Detection of circles based on modification of Hough circles detector \cite{houghcircles} and special kernel 
-\item Detection of triangles based on OpenCV polygon detection \cite{findcontours}
+\item Detection of circles based on modification of Hough circles transform \cite{houghcircles} and special kernel 
+\item Detection of triangles based on OpenCV contour detection \cite{findcontours}
 \item Extraction of information about the course configuration with TSP solver \cite{tspsolver} on course layer with special scoring matrix
 \item Selection of the best routes for each control with $A^*$ algorithm \cite{astar}.
 \end{enumerate}
@@ -112,7 +110,7 @@ The image itself is a simple scheme with all kinds of shapes and colors, where a
 The problem with the data is the fact that objects are not real-life objects, so pretrained computer vision models are not useful for us.
 Overall, the structure of image is based on some set of rules, that are hard to express in a formal way.
 These rules are hard to learn artificially, because there are same colors used for different types of things, and objects are not consistent in terms of forms and shapes.
-Also, there are connections between objects, that are really hard to find in general case. A sample of a map can be found here \ref{mapsample}.
+Also, there are connections between objects, that are really hard to find in general case (\cref{mapsample}).
 
 We decided that the best approach we have is to solve a semantic segmentation problem.
 Indeed, label of a pixel is mostly based on its color, generic form of shape it belongs to, and surrounding objects, so the detection problem is local and can be solved using $128 \times 128$ patches of a map.
@@ -136,7 +134,7 @@ But it doesn't take overlaps into account and confuses different objects if they
 \subsubsection{CNN for detecting circuit layer}
 \subparagraph{Motivation for the model\\}
 
-To try and outperform the naive implementation, we developed and trained a CNN to detect the circuit layer, e.g the layers that notated where the start/end points of a track lied, the connections between tracks, and the labels for each track.
+To try and outperform the naive implementation, we developed and trained a CNN \cite{cnn} to detect the circuit layer, e.g the layers that notated where the start/end points of a track lied, the connections between tracks, and the labels for each track.
 The motivation for creating this CNN was that we could not be sure that a naive implementation of removing layers based on color alone would work well, and we hoped that a simple CNN could detect connected circles, triangles, and lines of the same color and thickness in order to remove them from the final map. 
 
 \subparagraph{Creating training and validation sets with masks\\}
@@ -144,7 +142,7 @@ The motivation for creating this CNN was that we could not be sure that a naive 
 In order to train the CNN with a limited data-set, we took maps without circuits, in other words maps that were ready for path detection, and added layers on top of them so that we could have ample training and validation sets. This included drawing a random number of circles, lines, and text using cv2 functions, ensuring that the locations of the circles were spread out and the lines connected the circles, and using a variety of colors (though uniform per training image). All in all it was fairly simple and allowed us to produce however many training/validation images as we wanted. To produce the masks for the training and validation sets, all that needed to be done was feed in the color that was used to create the figures on the training/validation images into a function that took a “bitwise and” of the image and a mask of that color. Then just converting the mask to black and white produced good results.
 
 \subparagraph{Creating the CNN model\\}
-We created a simple CNN model \ref{fig:simple-CNN} with 2 convolution layers and no pooling layers, figuring that all the CNN would really do is learn the intended colors to remove, since the figures to be removed were uniformly colored. The model would take in a colored 200x200 random segment of each colored image, and output a black/white mask as intended. For the model we experimented with different loss functions, and decided on Binary Cross Entropy loss, which is used commonly for binary classification tasks. For the optimizer, we learned that the Adam optimizer produced results similar to though more effective than Stochastic Gradient Descent, and ran with that.
+We created a simple CNN model (\cref{fig:simple-CNN}) with 2 convolution layers and no pooling layers, figuring that all the CNN would really do is learn the intended colors to remove, since the figures to be removed were uniformly colored. The model would take in a colored 200x200 random segment of each colored image, and output a black/white mask as intended. For the model we experimented with different loss functions, and decided on Binary Cross Entropy loss, which is used commonly for binary classification tasks. For the optimizer, we learned that the Adam optimizer produced results similar to though more effective than Stochastic Gradient Descent, and ran with that.
 
 
 
@@ -152,12 +150,12 @@ We created a simple CNN model \ref{fig:simple-CNN} with 2 convolution layers and
 Eventually we realized that for the task of circle detection we needed the model to do more than just separate the layers based on color.
 There were often parts of the map that were the same color as the layers we intended to remove, and we didn't want to segment them in the layer detection model.
 This was because the circle detection was much less effective if there were layers interrupting the circles. So we attempted to reconfigure the model to ideally just identify the circles and lines, ignoring other figures like labels of the circles and other figures in the map (areas that were out of bounds often were colored the same as the circles/lines).
-Our reasoning for the current state of the model was that it should have already been able to do more than simple color identification, if we just modified the training masks to only include the lines and circles. We did this and also attempted to incorporate max pooling which should have made line detection easier. Unfortunately this model \ref{fig:pooling-CNN} did not produce adequate results, and we were ultimately unable to use it.
+Our reasoning for the current state of the model was that it should have already been able to do more than simple color identification, if we just modified the training masks to only include the lines and circles. We did this and also attempted to incorporate max pooling which should have made line detection easier \cite{cnnsemanticsegmentation}. Unfortunately this model (\cref{fig:pooling-CNN}) did not produce adequate results, and we were ultimately unable to use it.
 
 
 \subparagraph{Training the model\\}
-Using the images and masks that we had created, we made tensors which could be fed into pyTorch data loaders.
-This involved creating random crops of the masks and images. One problem we had to overcome, which turned out to be relatively simple, was ensuring that the random crops were of the same section for the images and corresponding masks. With our training and validation data loaders, we were able to train the model in the corresponding fashion \ref{fig:training-loop}. With our model fully trained, we were able to test it on a testing set that was filled with maps with layers on top. While it did produce great results on maps where the layers to be removed were the only ones of that color, since the model was essentially just detecting the colors of the layers it produced a decent amount of noise on non-ideal maps. Before attempting to modify the model to only separate circles/lines, we thought that we would be able to remove the noise in order to isolate the intended figures for the later circle detection algorithm. However, as we discovered the main problem was not removing noise, which did not really hinder the way we detected the circles, but rather the presence of larger figures like pink areas on the map or the numerical labels of the circles. 
+Using the images and masks that we had created, we made tensors which could be fed into pyTorch data loaders \cite{pytorch}.
+This involved creating random crops of the masks and images. One problem we had to overcome, which turned out to be relatively simple, was ensuring that the random crops were of the same section for the images and corresponding masks. With our training and validation data loaders, we were able to train the model in the corresponding fashion (\cref{fig:training-loop}). With our model fully trained, we were able to test it on a testing set that was filled with maps with layers on top. While it did produce great results on maps where the layers to be removed were the only ones of that color, since the model was essentially just detecting the colors of the layers it produced a decent amount of noise on non-ideal maps. Before attempting to modify the model to only separate circles/lines, we thought that we would be able to remove the noise in order to isolate the intended figures for the later circle detection algorithm. However, as we discovered the main problem was not removing noise, which did not really hinder the way we detected the circles, but rather the presence of larger figures like pink areas on the map or the numerical labels of the circles. 
 
 \subsubsection{U-Net for detecting obstacle layer}
 
@@ -165,7 +163,7 @@ For detection of a runnable layer, we also tried CNN model.
 The problem with results was the same: if model doesn't use pooling, it can't extract enough information from surrounding context and is solely based on a color of a pixel.
 If it has pooling, than it has hard time recovering label for specific pixel during upsample stage.
 
-Then we tried U-Net \cite{UNet}. Advantage of the U-Net is its ability to have a context of real pixel values and look at the high-level descriptors as well.
+Then we tried U-Net \cite{unet}. Advantage of the U-Net is its ability to have a context of real pixel values and look at the high-level descriptors as well.
 So we created a compact version of U-Net that takes 10 minutes to train, weights less than a megabyte and works relatively well.
 
 The implementation is based on keras with tensorflow \cite{keras}, we also used albumentations \cite{albumentations} package to augment the dataset.
@@ -178,11 +176,11 @@ Initially, it struggled to extrapolate its knowledge, and while it produced grea
 After experiments we found out that it relied on the image dimension. So we used maxpooling to downsample high-resolution image.
 Also it had a hard time understanding different colormaps so we retrained it on the output of our baseline model, that basically produces <<the red layer>>. 
 
-Suprisingly, after these two changes results became great \ref{unetcircuitresult}
+Suprisingly, after these two changes results became great (\cref{unetcircuitresult})
 
 \subsection{Detection of course configuration}
 
-Course configuration consists of triangle, which is a start, set of circles, that represent controls, and lines that are used for connection \ref{examplecircuit}.
+Course configuration consists of triangle, which is a start, set of circles, that represent controls, and lines that are used for connection (\cref{examplecircuit}).
 In general, there are many possibilities for race rules, that may result in map having several start points, more than two connections for a control or even no connections at all.
 We decomposed our detection process the way that shapes detection is separated from connecting objects so intermediate data might still be useful.
 Consiedring connections between controls, there are many challenges and modes to consider for every single race type.
@@ -193,7 +191,7 @@ So, for the sake of simplicity, we limited out problem to courses when  configur
 To find a start is a problem of finding a triangle.
 We know that the given triangle is going to be equilateral.
 To find it, we need to address the challenge of a noise in the data.
-In general, openCV provides a way to find a custom polygon \cite{contours}
+In general, openCV provides a way to find a custom polygon \cite{findcontours}
 The problem with the method is that it expects polygon to be filled, when triangle from our dataset only has contours.
 Not only the triangle has contours, but it also has adjacent line, so using default algorithm is not an option.
 Our algorithm uses dilation and erosion to remove noise around the triangle and keep only the pixels inside of a contour:
@@ -217,7 +215,7 @@ Our algorithm works as following:
 \begin{enumerate}
     \item For every pixel that is labelled as a part of circuit layer, we add $+1$ to all pixels that are distance $r$ away from it.
     \item Then we select pixels that have an accumulated sum bigger than $candidate\_threshold$. It means this pixel has a lot of information in its r-neibourhood and we need to check it.
-    \item For every candidate circle center we take $2r \times 2r$ region and try to understand if it is a circle or not. it might be a solid surface, corner of rectangle or something else. To do so, we create a special $2r \times 2r$ kernel, that has a lot of 1's on the circle border and a lot of -1's near the center.
+    \item For every candidate circle center we take $2r \times 2r$ region and try to understand if it is a circle or not. it might be a solid surface, corner of rectangle or something else. To do so, we create a special $2r \times 2r$ kernel \cref{fig:circlekernel}, that has a lot of 1's on the circle border and a lot of -1's near the center.
     \item When we take a sum of pointwise multiplications we get a total $score = border\_pixels - inside\_pixels$, because of the kernel structure.
     \item We concider circle present in the layer if $score > match\_threshold$.
     \item If circle has a high score, we filter out all the circles in its $r$-neighborhood, so we dont face problem with duplications. 
@@ -286,32 +284,73 @@ We are leaving this task to future ourselves or those who will continue our work
 
 
 
+
 % \nocite{*}
 
+\newpage
+\section{Appendix}
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{CNN simple model.png}
+    \captionof{figure}{Simple CNN Model}
+    \label{fig:simple-CNN}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{CNN model pooling.png}
+    \captionof{figure}{Attempted CNN Model with pooling}
+    \label{fig:pooling-CNN}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{CNN training loop.png}
+    \captionof{figure}{Model Training Loop}
+    \label{fig:training-CNN}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{Predicted mask.png}
+    \captionof{figure}{Original Image and Predicted Mask}
+    \label{fig:prediction-CNN}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{circle_kernel.png}
+    \captionof{figure}{Patch for circle detection and circle kernel.}
+    \label{fig:circlekernel}
+\end{figure}
+
+
+\newpage
 \begin{thebibliography}{00}
-\bibitem{orienteering} orienteering, --- URL: 
-\bibitem{strava} Strava, --- URL: 
-\bibitem{livelox} Livelox, --- URL: 
-\bibitem{openorienteering} openorienteering, --- URL: 
-\bibitem{ocad} ocad, --- URL: 
-\bibitem{worldcup} World cup live translation, --- URL: 
+\bibitem{orienteering} Orienteering, Wikipedia --- URL: https://en.wikipedia.org/wiki/Orienteering 
+\bibitem{livelox} Livelox website --- URL: https://www.livelox.com/
+\bibitem{openorienteering} Openorienteering Mapper application, --- URL: https://www.openorienteering.org/apps/mapper/ 
+\bibitem{ocad} OCAD website, OCAD Inc, --- URL: https://www.ocad.com/en/ 
+\bibitem{worldcup} Orienteering World Cup Round 1 2022, YouTube, --- URL: https://youtu.be/vwzoxJ2Bc0k?si=33TMbI07Ehfh\_jmc\&t\=308
+\bibitem{unet} Ronneberger, O., Fischer, P., Brox, T.: U-net: Convolutional networks for biomedical image segmentation. In: MICCAI. pp. 234–241. Springer (2015) 
+\bibitem{houghcircles} Hassanein, A. S., Mohammad, S., Sameer, M., \& Ragab, M. E. (2015). A survey on Hough transform, theory, techniques and applications. arXiv preprint arXiv:1502.02160.
+\bibitem{findcontours} Satoshi Suzuki and others. Topological structural analysis of digitized binary images by border following. Computer Vision, Graphics, and Image Processing, 30(1):32–46, 1985. 
+\bibitem{tspsolver} Fillipe Goulart, python-tsp, GitHub --- URL: https://github.com/fillipe-gsm/python-tsp
+\bibitem{astar} Russell, Stuart J. (2018). Artificial intelligence a modern approach. Norvig, Peter (4th ed.). Boston: Pearson. ISBN 978-0134610993. OCLC 1021874142.
 \bibitem{iof} IOF mapping specification, --- URL: https://orienteering.sport/iof/mapping/
+\bibitem{labelme} Labelme, Kentaro Wada, GitHub --- URL: https://github.com/wkentaro/labelme 
 \bibitem{pipproblem} Shimrat, M. (1962). Algorithm 112: position of point relative to polygon. Communications of the ACM, 5(8), 434.
-\bibitem{b12} OpenCV, --- URL: 
-\bibitem{b12} U-Net, --- URL: 
-\bibitem{b12} hough circles, --- URL: 
-\bibitem{b12} check that point is into triangle, --- URL: 
-\bibitem{b12} A star on quadtree, --- URL: 
-\bibitem{b12} voronoi on polygons, --- URL: 
-\bibitem{b12} pytorch and keras, --- URL: 
-\bibitem{b12} augmentation, --- URL: 
-\bibitem{b12} semantic segmentation --- URL: 
-\bibitem{b12} labelme --- URL: 
-\bibitem{b12} jaccard metric --- URL: 
-\bibitem{mpld3} mpld3: A D3 Viewer for Matplotlib --- URL:
-https://mpld3.github.io/
+\bibitem{cnn} Krizhevsky, A., Sutskever, I., \& Hinton, G. E. (2012). ImageNet Classification with Deep Convolutional Neural Networks. In F. Pereira, C. J. Burges, L. Bottou, \& K. Q. Weinberger (Eds.)
+\bibitem{pytorch} Pytorch, https://pytorch.org/
+\bibitem{cnnsemanticsegmentation} Le, James. “Semantic Segmentation Using Deep Learning.” Nanonets Intelligent Automation, and Business Process AI Blog, Nanonets Intelligent Automation, and Business Process AI Blog, 13 June 2022, nanonets.com/blog/how-to-do-semantic-segmentation-using-deep-learning/.
+\bibitem{keras} Keras, https://keras.io/
+\bibitem{albumentations} Buslaev, A., Iglovikov, V. I., Khvedchenya, E., Parinov, A., Druzhinin, M., \& Kalinin, A. A. (2020). Albumentations: fast and flexible image augmentations. Information, 11(2), 125. 
+\bibitem{tsp} Goyal, S. (2010, April). A survey on travelling salesman problem. In Midwest instruction and computing symposium (pp. 1-9).
+\bibitem{quadtree} Andrea Serreli, Pathfinding with Quadtrees and A*, --- URL: https://www.andreaserreli.me/post/pathfinding-with-quadtrees-and-a
+\bibitem{streamlit} Streamlit, --- URL: https://streamlit.io/
+\bibitem{mpld3} mpld3: A D3 Viewer for Matplotlib --- URL: https://mpld3.github.io/
+
+\bibitem{voronoipolygon} Xiaolong Liu, \& Meixiu Yu. (2020, July 26). longavailable/voronoi-diagram-for-polygons. Zenodo. http://doi.org/10.5281/zenodo.3960407
+
 \end{thebibliography}
 	
-	
+
+
 \end{document}
